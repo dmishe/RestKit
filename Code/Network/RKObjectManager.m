@@ -297,6 +297,7 @@ static BOOL RKDoesArrayOfResponseDescriptorsContainEntityMapping(NSArray *respon
     operation.managedObjectContext = managedObjectContext;
     operation.managedObjectCache = self.managedObjectStore.managedObjectCache;
     operation.fetchRequestBlocks = self.fetchRequestBlocks;
+    operation.deletesOrphanedObjects = YES;
     return operation;
 }
 
