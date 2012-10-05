@@ -98,6 +98,42 @@
     [RKTestFactory tearDown];
 }
 
+- (void)testInitializationWithBaseURLSetsDefaultAcceptHeaderValueToJSON
+{
+    RKObjectManager *manager = [RKObjectManager managerWithBaseURL:[NSURL URLWithString:@"http://restkit.org"]];
+    expect([manager defaultHeaders][@"Accept"]).to.equal(RKMIMETypeJSON);
+}
+
+- (void)testInitializationWithBaseURLSetsRequestSerializationMIMETypeToFormURLEncoded
+{
+    RKObjectManager *manager = [RKObjectManager managerWithBaseURL:[NSURL URLWithString:@"http://restkit.org"]];
+    expect(manager.requestSerializationMIMEType).to.equal(RKMIMETypeFormURLEncoded);
+}
+
+- (void)testInitializationWithAFHTTPClientSetsNilAcceptHeaderValue
+{
+    AFHTTPClient *client = [AFHTTPClient clientWithBaseURL:[NSURL URLWithString:@"http://restkit.org"]];
+    [client setDefaultHeader:@"Accept" value:@"this/that"];
+    RKObjectManager *manager = [[RKObjectManager alloc] initWithHTTPClient:client];
+    expect([manager defaultHeaders][@"Accept"]).to.equal(@"this/that");
+}
+
+- (void)testDefersToAFHTTPClientParameterEncodingWhenInitializedWithAFHTTPClient
+{
+    AFHTTPClient *client = [AFHTTPClient clientWithBaseURL:[NSURL URLWithString:@"http://restkit.org"]];
+    client.parameterEncoding = AFJSONParameterEncoding;
+    RKObjectManager *manager = [[RKObjectManager alloc] initWithHTTPClient:client];
+    expect([manager requestSerializationMIMEType]).to.equal(RKMIMETypeJSON);
+}
+
+- (void)testDefaultsToFormURLEncodingForUnsupportedParameterEncodings
+{
+    AFHTTPClient *client = [AFHTTPClient clientWithBaseURL:[NSURL URLWithString:@"http://restkit.org"]];
+    client.parameterEncoding = AFPropertyListParameterEncoding;
+    RKObjectManager *manager = [[RKObjectManager alloc] initWithHTTPClient:client];
+    expect([manager requestSerializationMIMEType]).to.equal(RKMIMETypeFormURLEncoded);
+}
+
 // TODO: Move to Core Data specific spec file...
 - (void)testShouldUpdateACoreDataBackedTargetObject
 {
@@ -277,6 +313,24 @@
 
     assertThatInteger(progressCallbackCount, is(equalToInteger(3)));
     assertThatInteger(completionBlockOperationCount, is(equalToInteger(3)));
+}
+
+- (void)testThatObjectParametersAreNotSentDuringGetObject
+{
+    RKHuman *temporaryHuman = [[RKHuman alloc] initWithEntity:[NSEntityDescription entityForName:@"RKHuman" inManagedObjectContext:_objectManager.managedObjectStore.persistentStoreManagedObjectContext] insertIntoManagedObjectContext:_objectManager.managedObjectStore.persistentStoreManagedObjectContext];
+    temporaryHuman.name = @"My Name";
+    temporaryHuman.railsID = @204;
+    RKManagedObjectRequestOperation *operation = [_objectManager appropriateObjectRequestOperationWithObject:temporaryHuman method:RKRequestMethodGET path:nil parameters:@{@"this": @"that"}];
+    expect([operation.request.URL absoluteString]).to.equal(@"http://127.0.0.1:4567/humans/204?this=that");
+}
+
+- (void)testThatObjectParametersAreNotSentDuringDeleteObject
+{
+    RKHuman *temporaryHuman = [[RKHuman alloc] initWithEntity:[NSEntityDescription entityForName:@"RKHuman" inManagedObjectContext:_objectManager.managedObjectStore.persistentStoreManagedObjectContext] insertIntoManagedObjectContext:_objectManager.managedObjectStore.persistentStoreManagedObjectContext];
+    temporaryHuman.name = @"My Name";
+    temporaryHuman.railsID = @204;
+    RKManagedObjectRequestOperation *operation = [_objectManager appropriateObjectRequestOperationWithObject:temporaryHuman method:RKRequestMethodDELETE path:nil parameters:@{@"this": @"that"}];
+    expect([operation.request.URL absoluteString]).to.equal(@"http://127.0.0.1:4567/humans/204?this=that");
 }
 
 // TODO: Move to Core Data specific spec file...

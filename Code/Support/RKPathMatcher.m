@@ -22,6 +22,7 @@
 #import "SOCKit.h"
 #import "RKLog.h"
 #import "RKDictionaryUtilities.h"
+#import "RKPathUtilities.h"
 
 static NSString *RKEncodeURLString(NSString *unencodedString);
 extern NSDictionary *RKQueryParametersFromStringWithEncoding(NSString *string, NSStringEncoding stringEncoding);
@@ -40,6 +41,7 @@ static NSString *RKEncodeURLString(NSString *unencodedString)
 
 @interface RKPathMatcher ()
 @property (nonatomic, strong) SOCPattern *socPattern;
+@property (nonatomic, copy) NSString *patternString; // SOCPattern keeps it private
 @property (nonatomic, copy) NSString *sourcePath;
 @property (nonatomic, copy) NSString *rootPath;
 @property (copy, readwrite) NSDictionary *queryParameters;
@@ -58,12 +60,12 @@ static NSString *RKEncodeURLString(NSString *unencodedString)
     return copy;
 }
 
-
 + (RKPathMatcher *)pathMatcherWithPattern:(NSString *)patternString
 {
     NSAssert(patternString != NULL, @"Pattern string must not be empty in order to perform pattern matching.");
     RKPathMatcher *matcher = [[RKPathMatcher alloc] init];
     matcher.socPattern = [SOCPattern patternWithString:patternString];
+    matcher.patternString = patternString;
     return matcher;
 }
 
@@ -73,6 +75,12 @@ static NSString *RKEncodeURLString(NSString *unencodedString)
     matcher.sourcePath = pathString;
     matcher.rootPath = pathString;
     return matcher;
+}
+
+// Normalize our root path for matching cleanly with SOCKit
+- (void)setRootPath:(NSString *)rootPath
+{
+    _rootPath = RKPathNormalize(rootPath);
 }
 
 - (BOOL)matches
